@@ -13,7 +13,6 @@ import java.util.UUID
 import kotlin.math.log
 
 
-// dao
 @Serializable
 data class ExposedUser(
     @Serializable(with = UUIDSerializer::class)

@@ -12,7 +12,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.io.File
 
-// TODO post запрос в папку files/admin
 
 fun Application.configureFileRouting() {
     routing {
