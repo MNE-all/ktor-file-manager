@@ -9,7 +9,7 @@ import com.fmanager.plugins.routers.configureRouting
 import com.fmanager.plugins.routers.configureUserRouting
 
 fun main() {
-    embeddedServer(CIO, port = 8080, host = "0.0.0.0", module = Application::module)
+    embeddedServer(CIO, port = 4444, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
