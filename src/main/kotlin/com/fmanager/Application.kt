@@ -1,12 +1,12 @@
 package com.fmanager
 
-import io.ktor.server.application.*
-import io.ktor.server.engine.*
-import io.ktor.server.cio.*
-import com.fmanager.plugins.*
+import com.fmanager.plugins.configureSecurity
+import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.routers.configureFileRouting
-import com.fmanager.plugins.routers.configureRouting
 import com.fmanager.plugins.routers.configureUserRouting
+import io.ktor.server.application.*
+import io.ktor.server.cio.*
+import io.ktor.server.engine.*
 
 fun main() {
     embeddedServer(CIO, port = 4444, host = "0.0.0.0", module = Application::module)
@@ -18,5 +18,4 @@ fun Application.module() {
     configureSerialization()
     configureUserRouting()
     configureFileRouting()
-    configureRouting()
 }

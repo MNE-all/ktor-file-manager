@@ -1,13 +1,8 @@
 package com.fmanager.plugins.schemas
 
-import com.fmanager.plugins.schemas.UserService.Users.autoGenerate
-import com.fmanager.plugins.schemas.UserService.Users.uniqueIndex
-import com.fmanager.utils.PasswordSecure
-import kotlinx.coroutines.CoroutineScope
+import AccessService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -41,9 +36,9 @@ class FileService(private val database: Database) {
         }[Files.name]
     }
 
-    suspend fun read(id: Int): ExposedFile? {
+    suspend fun read(name: String): ExposedFile? {
         return dbQuery {
-            Files.select { Files.id eq id }
+            Files.select { Files.name eq name }
                 .map { ExposedFile(it[Files.id].value, it[Files.name], it[Files.access].value) }
                 .singleOrNull()
         }

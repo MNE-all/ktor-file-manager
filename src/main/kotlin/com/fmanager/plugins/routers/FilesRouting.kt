@@ -1,6 +1,5 @@
 package com.fmanager.plugins.routers
 
-import com.fmanager.plugins.schemas.FileService
 import com.fmanager.plugins.schemas.ResponseFile
 import com.fmanager.utils.DatabaseFactory
 import io.ktor.http.*
@@ -17,9 +16,9 @@ import java.io.File
 
 fun Application.configureFileRouting() {
     routing {
-        var fileDescription = ""
+        var fileAccess = ""
         var fileName = ""
-        authenticate{
+        authenticate {
             post("/upload") {
                 // Взятие информации с JWT токена
                 val principal = call.principal<JWTPrincipal>()
@@ -31,7 +30,9 @@ fun Application.configureFileRouting() {
                     multipartData.forEachPart { part ->
                         when (part) {
                             is PartData.FormItem -> {
-                                fileDescription = part.value
+                                if (part.name == "access") {
+                                    fileAccess = part.value
+                                }
                             }
 
                             is PartData.FileItem -> {
@@ -40,7 +41,8 @@ fun Application.configureFileRouting() {
                                 File("files/$fileName").writeBytes(fileBytes)
 
                                 with(DatabaseFactory) {
-                                    this.FileService.create(ResponseFile(fileName, fileDescription.toInt()))
+                                    var x = fileAccess.toInt()
+                                    this.FileService.create(ResponseFile(fileName, x))
                                 }
                             }
 
@@ -49,74 +51,57 @@ fun Application.configureFileRouting() {
                         part.dispose()
                     }
 
-                    call.respondText("$fileDescription is uploaded to 'files/$fileName'")
-                }
-                else {
+                    call.respondText("$fileName is uploaded to 'files/$fileName' with access level $fileAccess")
+                } else {
                     call.respondText("Недостаточно прав")
                 }
             }
-        }
-
-        post("/upload/admin") {
-            // Взятие информации с JWT токена
-            val principal = call.principal<JWTPrincipal>()
-            val role = principal!!.payload.getClaim("role").asInt()
-
-            val multipartData = call.receiveMultipart()
-
-            if (role == 3) {
-                multipartData.forEachPart { part ->
-                    when (part) {
-                        is PartData.FormItem -> {
-                            fileDescription = part.value
-                        }
-
-                        is PartData.FileItem -> {
-                            fileName = part.originalFileName as String
-                            val fileBytes = part.streamProvider().readBytes()
-                            File("files/admin/$fileName").writeBytes(fileBytes)
 
 
-                        }
+            get("/download") {
+                val principal = call.principal<JWTPrincipal>()
+                val role = principal!!.payload.getClaim("role").asInt()
 
-                        else -> {}
+                val name = (call.request.queryParameters["name"] ?: throw IllegalArgumentException("Invalid file name"))
+
+                with(DatabaseFactory) {
+                    val fileInfo = this.FileService.read(name)
+
+                    if (fileInfo != null && fileInfo.access <= role) {
+                        val file = File("files/$name")
+                        if (file.exists()) {
+                            call.response.header(
+                                HttpHeaders.ContentDisposition,
+                                ContentDisposition.Attachment.withParameter(
+                                    ContentDisposition.Parameters.FileName,
+                                    name
+                                )
+                                    .toString()
+                            )
+                            call.respondFile(file)
+                        } else call.respond(HttpStatusCode.NotFound)
+                    } else {
+                        call.respond(hashMapOf("error" to "Недостаточно прав или файл не найден!"))
+                        call.respond(HttpStatusCode.NotFound)
                     }
-                    part.dispose()
                 }
 
-                call.respondText("$fileDescription is uploaded to 'files/$fileName'")
-            }
-            else {
-                call.respondText("Недостаточно прав")
+
             }
         }
 
-
-        get("/download/txt") {
-            val file = File("uploads/ТЗ для турфирмы.docx")
-            if (file.exists()) {
-                call.response.header(
-                    HttpHeaders.ContentDisposition,
-                    ContentDisposition.Attachment.withParameter(
-                        ContentDisposition.Parameters.FileName,
-                        "ТЗ для турфирмы.docx"
-                    )
-                        .toString()
-                )
-                call.respondFile(file)
-            } else call.respond(HttpStatusCode.NotFound)
+        get("/files") {
+            with(DatabaseFactory) {
+                call.respond(this.FileService.readAll())
+                call.respond(HttpStatusCode.OK)
+            }
         }
 
-        get("/download/png") {
-            val file = File("uploads/bubble.png")
-            if (file.exists()) {
-                call.response.header(
-                    HttpHeaders.ContentDisposition,
-                    ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "bubble.png")
-                        .toString()
-                )
-                call.respondFile(file)
-            } else call.respond(HttpStatusCode.NotFound)
+        get("/access") {
+            with(DatabaseFactory) {
+                call.respond(this.AccessService.readAll())
+                call.respond(HttpStatusCode.OK)
+            }
         }
     }
 }
