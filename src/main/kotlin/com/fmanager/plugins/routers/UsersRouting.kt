@@ -95,6 +95,8 @@ fun Application.configureUserRouting() {
             * 1. user
             * 2. writer
             * 3. admin
+            *
+            * Более актуальную информацию можно получть, отправив get запрос по /access
              */
             put("/users/access") {
                 val principal = call.principal<JWTPrincipal>()

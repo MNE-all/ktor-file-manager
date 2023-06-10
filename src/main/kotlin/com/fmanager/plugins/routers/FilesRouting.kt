@@ -85,7 +85,7 @@ fun Application.configureFileRouting() {
                 }
             }
 
-            // TODO выпадача списка файлов по роли
+
             get("/files") {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
