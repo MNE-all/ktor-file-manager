@@ -1,28 +1,18 @@
 package com.fmanager.plugins.schemas
 
+import AccessService
 import com.fmanager.utils.PasswordSecure
 import com.fmanager.utils.UUIDSerializer
-import kotlinx.coroutines.*
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
-import java.util.UUID
-import kotlin.math.log
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
+import org.jetbrains.exposed.sql.transactions.transaction
+import java.util.*
 
-
-@Serializable
-data class ExposedUser(
-    @Serializable(with = UUIDSerializer::class)
-    val id: UUID,
-    val name: String,
-    val login: String,
-    val password: ByteArray,
-    val salt: ByteArray,
-    val role: Int)
-//
 @Serializable
 data class SystemUserInfo(
     @Serializable(with = UUIDSerializer::class)
@@ -34,7 +24,7 @@ data class SystemUserInfo(
 @Serializable
 data class ResponseUser(val name: String, val login: String, val password: String)
 
-class UserService(private val database: Database) {
+class UserService(database: Database) {
 
     object Users : Table() {
         val id = uuid("id").autoGenerate()
@@ -84,16 +74,16 @@ class UserService(private val database: Database) {
         }[Users.login]
     }
 
-    suspend fun read(id: String): ResponseUser? {
+    suspend fun read(login: String): ResponseUser? {
         return dbQuery {
-            Users.select { Users.login eq id }
+            Users.select { Users.login eq login }
                 .map { ResponseUser(it[Users.name], it[Users.login], it[Users.password].decodeToString()) }
                 .singleOrNull()
         }
     }
 
     suspend fun readAll(): List<SystemUserInfo> = dbQuery {
-        var list: MutableList<SystemUserInfo> = mutableListOf()
+        val list: MutableList<SystemUserInfo> = mutableListOf()
         val query = Users.selectAll()
         query.forEach {
             list.add(
@@ -130,9 +120,9 @@ class UserService(private val database: Database) {
         }
     }
 
-    suspend fun delete(id: String) {
+    suspend fun delete(login: String) {
         dbQuery {
-            Users.deleteWhere { Users.login.eq(id) }
+            Users.deleteWhere { Users.login.eq(login) }
         }
     }
 }

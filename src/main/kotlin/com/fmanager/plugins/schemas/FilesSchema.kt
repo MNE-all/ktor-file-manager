@@ -14,7 +14,7 @@ data class ExposedFile(val id: Int, val name: String, val access: Int)
 @Serializable
 data class ResponseFile(val name: String, val access: Int)
 
-class FileService(private val database: Database) {
+class FileService(database: Database) {
     object Files : IntIdTable() {
         val name = varchar("name", length = 80).uniqueIndex()
         val access = reference("access", AccessService.Access)
@@ -44,17 +44,19 @@ class FileService(private val database: Database) {
         }
     }
 
-    suspend fun readAll(): List<ExposedFile> = dbQuery {
-        var list: MutableList<ExposedFile> = mutableListOf()
+    suspend fun readAll(role: Int): List<ExposedFile> = dbQuery {
+        val list: MutableList<ExposedFile> = mutableListOf()
         val query = Files.selectAll()
         query.forEach {
-            list.add(
-                ExposedFile(
-                    it[Files.id].value,
-                    it[Files.name],
-                    it[Files.access].value,
+            if (it[Files.access].value <= role){
+                list.add(
+                    ExposedFile(
+                        it[Files.id].value,
+                        it[Files.name],
+                        it[Files.access].value,
+                    )
                 )
-            )
+            }
         }
         list
     }

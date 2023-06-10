@@ -2,17 +2,16 @@ package com.fmanager.plugins.routers
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.fmanager.utils.DatabaseFactory
-import com.fmanager.plugins.schemas.ExposedUser
 import com.fmanager.plugins.schemas.ResponseUser
+import com.fmanager.utils.DatabaseFactory
 import com.fmanager.utils.JWTPrefs
 import com.fmanager.utils.PasswordSecure
 import io.ktor.http.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import java.util.*
 
@@ -22,8 +21,8 @@ fun Application.configureUserRouting() {
         post("/users") {
             with(DatabaseFactory) {
                 val user = call.receive<ResponseUser>()
-                val id = this.UserService.create(user)
-                call.respond(HttpStatusCode.Created, id)
+                val login = this.UserService.create(user)
+                call.respond(HttpStatusCode.Created, "The '$login' account is created")
             }
         }
         // Login
@@ -36,7 +35,7 @@ fun Application.configureUserRouting() {
 
             users.forEach{ user ->
                 val hash = PasswordSecure.generateHash(password, user.salt).decodeToString()
-                var trueHase = user.password.decodeToString()
+                val trueHase = user.password.decodeToString()
 
                 if (user.login == login && trueHase == hash) {
                     // Generate JWT
@@ -55,15 +54,8 @@ fun Application.configureUserRouting() {
             }
             call.respond(hashMapOf("error" to "Ошибка при авторизации!"))
         }
-
-        // Тестовый метод -> нуждается в удалении
-        get("/users") {
-            with(DatabaseFactory) {
-                call.respond(HttpStatusCode.OK, this.UserService.readAll())
-            }
-        }
         // Read user
-        get("/users/{id}") {
+        get("/users/{login}") {
             val db = DatabaseFactory
             with(db) {
                 val login = (call.parameters["login"]  ?: throw IllegalArgumentException("Invalid login"))
@@ -82,11 +74,28 @@ fun Application.configureUserRouting() {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal!!.payload.getClaim("login").asString()
                     val user = call.receive<ResponseUser>()
-                    this.UserService.update(login, user)
-                    call.respond(HttpStatusCode.OK)
+
+                    if (login != "admin" || user.login == "admin"){
+                        this.UserService.update(login, user)
+                        call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
+                        call.respond(HttpStatusCode.OK)
+                    }
+                    else
+                    {
+                        call.respond(hashMapOf("error" to "Невозможно изменить логин пользователя!"))
+                        call.respond(HttpStatusCode.BadRequest)
+                    }
+
                 }
             }
+
+
             // Update user role
+            /*
+            * 1. user
+            * 2. writer
+            * 3. admin
+             */
             put("/users/access") {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
@@ -120,7 +129,7 @@ fun Application.configureUserRouting() {
                     call.request.queryParameters["login"]
                 }
                 else {
-                    principal!!.payload.getClaim("login").asString()
+                    principal.payload.getClaim("login").asString()
                 }
 
                 with(DatabaseFactory) {
@@ -128,7 +137,7 @@ fun Application.configureUserRouting() {
                         val startAmount = this.UserService.readAll().count()
                         this.UserService.delete(login!!)
                         if (startAmount - 1 == this.UserService.readAll().count()) {
-                            call.respond(hashMapOf("success" to "Пользователь $login успешно удалён!"))
+                            call.respond(hashMapOf("success" to "Пользователь '$login' успешно удалён!"))
                             call.respond(HttpStatusCode.OK)
                         }
                         else {
@@ -142,25 +151,6 @@ fun Application.configureUserRouting() {
                     }
                 }
             }
-
-            // Delete all users (for debugging)
-            delete("/users/clear") {
-                val principal = call.principal<JWTPrincipal>()
-                val role = principal!!.payload.getClaim("role").asInt()
-
-                if (role > 2) {
-                    with(DatabaseFactory) {
-                        for (user in this.UserService.readAll()) {
-                            if (user.login != "admin") {
-                                this.UserService.delete(user.login)
-                            }
-                        }
-                        call.respond(HttpStatusCode.OK)
-                    }
-                }
-            }
         }
-
-
     }
 }

@@ -40,8 +40,7 @@ fun Application.configureFileRouting() {
                                 File("files/$fileName").writeBytes(fileBytes)
 
                                 with(DatabaseFactory) {
-                                    var x = fileAccess.toInt()
-                                    this.FileService.create(ResponseFile(fileName, x))
+                                    this.FileService.create(ResponseFile(fileName, fileAccess.toInt()))
                                 }
                             }
 
@@ -84,17 +83,21 @@ fun Application.configureFileRouting() {
                         call.respond(HttpStatusCode.NotFound)
                     }
                 }
+            }
 
+            // TODO выпадача списка файлов по роли
+            get("/files") {
+                val principal = call.principal<JWTPrincipal>()
+                val role = principal!!.payload.getClaim("role").asInt()
 
+                with(DatabaseFactory) {
+                    call.respond(this.FileService.readAll(role))
+                    call.respond(HttpStatusCode.OK)
+                }
             }
         }
 
-        get("/files") {
-            with(DatabaseFactory) {
-                call.respond(this.FileService.readAll())
-                call.respond(HttpStatusCode.OK)
-            }
-        }
+
 
         get("/access") {
             with(DatabaseFactory) {
