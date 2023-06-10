@@ -1,4 +1,4 @@
-package com.fmanager
+package com.fmanager.green
 
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
@@ -129,7 +129,7 @@ class ApplicationTestUsersRouting {
 
     // Изменение профиля
     @Test
-    fun testRootUserEdit() = testApplication {
+    fun testRootUserUpdate() = testApplication {
         application {
             configureSerialization()
             configureSecurity()

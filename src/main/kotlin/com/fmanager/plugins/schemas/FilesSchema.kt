@@ -61,18 +61,18 @@ class FileService(database: Database) {
         list
     }
 
-    suspend fun update(id: Int, file: ResponseFile) {
+    suspend fun update(fileName: String, file: ResponseFile) {
         dbQuery {
-            Files.update({ Files.id eq id}) {
+            Files.update({ Files.name eq fileName}) {
                 it[name] = file.name
                 it[access] = file.access
             }
         }
     }
 
-    suspend fun delete(id: Int) {
+    suspend fun delete(name: String) {
         dbQuery {
-            Files.deleteWhere { Files.id.eq(id) }
+            Files.deleteWhere { Files.name.eq(name) }
         }
     }
 }

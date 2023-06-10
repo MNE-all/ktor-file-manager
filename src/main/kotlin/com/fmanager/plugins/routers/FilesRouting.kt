@@ -18,6 +18,7 @@ fun Application.configureFileRouting() {
         var fileAccess = ""
         var fileName = ""
         authenticate {
+            // Загрузка файла на сервер (в папку files)
             post("/upload") {
                 // Взятие информации с JWT токена
                 val principal = call.principal<JWTPrincipal>()
@@ -50,12 +51,13 @@ fun Application.configureFileRouting() {
                     }
 
                     call.respondText("$fileName is uploaded to 'files/$fileName' with access level $fileAccess")
+                    call.response.status(HttpStatusCode.Created)
                 } else {
                     call.respondText("Недостаточно прав")
                 }
             }
 
-
+            // Скачивание файла с сервера (из папки files)
             get("/download") {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
@@ -85,7 +87,7 @@ fun Application.configureFileRouting() {
                 }
             }
 
-
+            // Получение списка файлов, доступных для взаимодействия (из папки files)
             get("/files") {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
@@ -95,10 +97,77 @@ fun Application.configureFileRouting() {
                     call.respond(HttpStatusCode.OK)
                 }
             }
+
+            // Изменеие файла на сервере (в папке files)
+            put("/files") {
+                val principal = call.principal<JWTPrincipal>()
+                val role = principal!!.payload.getClaim("role").asInt()
+
+                val file = (call.request.queryParameters["file"] ?: throw IllegalArgumentException("Invalid file name"))
+
+                with(DatabaseFactory) {
+                    val multipartData = call.receiveMultipart()
+                    val expodsedFile = this.FileService.read(file)
+
+                    if (role > 1 && expodsedFile != null && role >= expodsedFile.access) {
+                        multipartData.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    if (part.name == "access") {
+                                        fileAccess = part.value
+                                    }
+                                }
+                                is PartData.FileItem -> {
+                                    fileName = part.originalFileName as String
+                                    val fileBytes = part.streamProvider().readBytes()
+
+                                    if (fileName == file){
+                                        File("files/$file").delete()
+                                        File("files/$fileName").writeBytes(fileBytes)
+                                    }
+                                    else{
+                                        File("files/$fileName").writeBytes(fileBytes)
+                                        File("files/$file").delete()
+                                    }
+
+                                    with(DatabaseFactory) {
+                                        this.FileService.update(file, ResponseFile(fileName, fileAccess.toInt()))
+                                    }
+                                }
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+                        call.respondText("$file is update to 'files/$fileName' with access level $fileAccess")
+                        call.response.status(HttpStatusCode.OK)
+                    }
+                    else {
+                        call.respondText("Недостаточно прав или файл не найден!")
+                    }
+                }
+            }
+
+            // Удаление файла на сервере (в папке files)
+            delete("/delete"){
+                val principal = call.principal<JWTPrincipal>()
+                val role = principal!!.payload.getClaim("role").asInt()
+                if (role > 2) {
+                    val name = (call.request.queryParameters["name"] ?: throw IllegalArgumentException("Invalid file name"))
+
+                    val file = File("files/$name")
+                    file.delete()
+                    with(DatabaseFactory){
+                        this.FileService.delete(name)
+                        call.respond(HttpStatusCode.OK)
+                    }
+                }
+                else {
+                    call.respond(HttpStatusCode.BadRequest)
+                }
+            }
         }
 
-
-
+        // Получение списка уровней доступа
         get("/access") {
             with(DatabaseFactory) {
                 call.respond(this.AccessService.readAll())
