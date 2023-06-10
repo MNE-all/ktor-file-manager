@@ -3,8 +3,8 @@ package com.fmanager.green
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
-import com.fmanager.plugins.routers.configureFileRouting
-import com.fmanager.plugins.routers.configureUserRouting
+import com.fmanager.routers.configureFileRouting
+import com.fmanager.routers.configureUserRouting
 import com.fmanager.plugins.schemas.ResponseFile
 import com.fmanager.utils.DatabaseFactory
 import io.ktor.client.request.*

@@ -1,4 +1,4 @@
-package com.fmanager.plugins.routers
+package com.fmanager.routers
 
 import com.fmanager.plugins.schemas.ResponseFile
 import com.fmanager.utils.DatabaseFactory

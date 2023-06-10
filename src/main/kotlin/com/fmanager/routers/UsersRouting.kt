@@ -1,4 +1,4 @@
-package com.fmanager.plugins.routers
+package com.fmanager.routers
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm

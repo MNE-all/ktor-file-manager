@@ -3,17 +3,14 @@ package com.fmanager.green
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
-import com.fmanager.plugins.routers.configureUserRouting
 import com.fmanager.plugins.schemas.ResponseUser
+import com.fmanager.routers.configureUserRouting
 import com.fmanager.utils.DatabaseFactory
 import com.fmanager.utils.DatabaseFactory.UserService
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -72,17 +69,16 @@ class ApplicationTestUsersRouting {
             configureUserRouting()
         }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            client.get("/users/admin").apply {
-                val user = UserService.read("admin")!!
-                val admin = Json.decodeFromString<ResponseUser>(bodyAsText())
+        client.get("/users/admin").apply {
+            val user = UserService.read("admin")!!
+            val admin = Json.decodeFromString<ResponseUser>(bodyAsText())
 
-                assertEquals(user.name, admin.name)
-                assertEquals(user.login, admin.login)
-                assertEquals(user.password, admin.password)
-                assertEquals(HttpStatusCode.OK, status)
-            }
+            assertEquals(user.name, admin.name)
+            assertEquals(user.login, admin.login)
+            assertEquals(user.password, admin.password)
+            assertEquals(HttpStatusCode.OK, status)
         }
+
     }
 
     // Удаление пользователя по токену
