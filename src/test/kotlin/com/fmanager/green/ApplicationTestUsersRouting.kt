@@ -26,12 +26,14 @@ class ApplicationTestUsersRouting {
     // Создание профиля
     @Test
     fun testRootPostUser() = testApplication {
+        // Setup
         application {
             configureSerialization()
             configureSecurity()
             configureUserRouting()
         }
 
+        // Test
         val response = client.post("/users") {
             contentType(ContentType.Application.Json)
             setBody(Json.encodeToString(ResponseUser("Test", "K1G9APpTuEHpFx3dTDT8", "Brains")))
@@ -39,6 +41,7 @@ class ApplicationTestUsersRouting {
         assertEquals("The 'K1G9APpTuEHpFx3dTDT8' account is created", response.bodyAsText())
         assertEquals(HttpStatusCode.Created, response.status)
 
+        // Tears down
         with(DatabaseFactory){
             this.UserService.delete("K1G9APpTuEHpFx3dTDT8")
         }
@@ -47,10 +50,12 @@ class ApplicationTestUsersRouting {
     // Авторизация пользователя
     @Test
     fun testRootLoginUser() = testApplication {
+        // Setup
         application {
             module()
         }
 
+        // Test
         val response = client.post("/login") {
             parameter("login", "admin")
             parameter("password", "root")
@@ -63,12 +68,14 @@ class ApplicationTestUsersRouting {
     // Просмотр информации о конкретном пользователе (в данном случае - об администаторе)
     @Test
     fun testRootReadUser()= testApplication {
+        // Setup
         application {
             configureSerialization()
             configureSecurity()
             configureUserRouting()
         }
 
+        // Test
         client.get("/users/admin").apply {
             val user = UserService.read("admin")!!
             val admin = Json.decodeFromString<ResponseUser>(bodyAsText())
@@ -78,7 +85,6 @@ class ApplicationTestUsersRouting {
             assertEquals(user.password, admin.password)
             assertEquals(HttpStatusCode.OK, status)
         }
-
     }
 
     // Удаление пользователя по токену
@@ -100,6 +106,7 @@ class ApplicationTestUsersRouting {
             parameter("password", "Brains")
         }
 
+        // Test
         val response = client.delete("/users") {
             header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
         }
@@ -136,10 +143,6 @@ class ApplicationTestUsersRouting {
 
         assertEquals(true, response.bodyAsText().contains("success"))
         assertEquals(HttpStatusCode.OK, response.status)
-
-        with(DatabaseFactory){
-            this.UserService.delete("V7HH6KRny3pg6WBbWqnu")
-        }
     }
 
     // Изменение профиля
@@ -195,22 +198,24 @@ class ApplicationTestUsersRouting {
 
         with(DatabaseFactory) {
             this.UserService.create(ResponseUser("test", "AEvQpKyX2g7skEYxBHoC", "root"))
+        }
 
-            // Test
-            val response = client.put("/users/access") {
-                contentType(ContentType.Application.Json)
-                header(
-                    HttpHeaders.Authorization,
-                    "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}"
-                )
-                parameter("login", "AEvQpKyX2g7skEYxBHoC")
-                parameter("role", 2)
-            }
+        // Test
+        val response = client.put("/users/access") {
+            contentType(ContentType.Application.Json)
+            header(
+                HttpHeaders.Authorization,
+                "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}"
+            )
+            parameter("login", "AEvQpKyX2g7skEYxBHoC")
+            parameter("role", 2)
+        }
 
-            assertEquals(true, response.bodyAsText().contains("success"))
-            assertEquals(HttpStatusCode.OK, response.status)
+        assertEquals(true, response.bodyAsText().contains("success"))
+        assertEquals(HttpStatusCode.OK, response.status)
 
-            // Teats down
+        // Tears down
+        with(DatabaseFactory) {
             this.UserService.delete("AEvQpKyX2g7skEYxBHoC")
         }
     }
