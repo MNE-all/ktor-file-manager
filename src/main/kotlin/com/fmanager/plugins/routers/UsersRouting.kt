@@ -3,7 +3,7 @@ package com.fmanager.plugins.routers
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.fmanager.plugins.schemas.ResponseUser
-import com.fmanager.utils.DatabaseFactory
+import com.fmanager.utils.DatabaseFactory.UserService
 import com.fmanager.utils.JWTPrefs
 import com.fmanager.utils.PasswordSecure
 import io.ktor.http.*
@@ -17,21 +17,22 @@ import java.util.*
 
 fun Application.configureUserRouting() {
     routing {
+        // Test
+        get("/users") {
+            call.respond(UserService.readAll())
+        }
+
         // Create user
         post("/users") {
-            with(DatabaseFactory) {
                 val user = call.receive<ResponseUser>()
-                val login = this.UserService.create(user)
+                val login = UserService.create(user)
                 call.respond(HttpStatusCode.Created, "The '$login' account is created")
-            }
         }
         // Login
         post("/login") {
-            val db = DatabaseFactory
-            val users = db.UserService.readAll()
+            val users = UserService.readAll()
             val login = (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
             val password = (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
-
 
             users.forEach{ user ->
                 val hash = PasswordSecure.generateHash(password, user.salt).decodeToString()
@@ -56,36 +57,28 @@ fun Application.configureUserRouting() {
         }
         // Read user
         get("/users/{login}") {
-            val db = DatabaseFactory
-            with(db) {
-                val login = (call.parameters["login"]  ?: throw IllegalArgumentException("Invalid login"))
-                val user = this.UserService.read(login)
-                if (user != null) {
-                    call.respond(HttpStatusCode.OK, user)
-                } else {
-                    call.respond(HttpStatusCode.NotFound)
-                }
+            val login = (call.parameters["login"] ?: throw IllegalArgumentException("Invalid login"))
+            val user = UserService.read(login)
+            if (user != null) {
+                call.respond(HttpStatusCode.OK, user)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
             }
         }
         authenticate {
             // Update user
             put("/users") {
-                with(DatabaseFactory) {
-                    val principal = call.principal<JWTPrincipal>()
-                    val login = principal!!.payload.getClaim("login").asString()
-                    val user = call.receive<ResponseUser>()
+                val principal = call.principal<JWTPrincipal>()
+                val login = principal!!.payload.getClaim("login").asString()
+                val user = call.receive<ResponseUser>()
 
-                    if (login != "admin" || user.login == "admin"){
-                        this.UserService.update(login, user)
-                        call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
-                        call.respond(HttpStatusCode.OK)
-                    }
-                    else
-                    {
-                        call.respond(hashMapOf("error" to "Невозможно изменить логин пользователя!"))
-                        call.respond(HttpStatusCode.BadRequest)
-                    }
-
+                if (login != "admin" || user.login == "admin") {
+                    UserService.update(login, user)
+                    call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
+                    call.respond(HttpStatusCode.OK)
+                } else {
+                    call.respond(hashMapOf("error" to "Невозможно изменить логин пользователя!"))
+                    call.respond(HttpStatusCode.BadRequest)
                 }
             }
 
@@ -103,22 +96,21 @@ fun Application.configureUserRouting() {
                 val role = principal!!.payload.getClaim("role").asInt()
 
                 if (role > 2) {
-                    with(DatabaseFactory) {
-                        val login = (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-                        val newRole: Int =
-                            (call.request.queryParameters["role"]
-                                ?: throw IllegalArgumentException("Invalid role")).toInt()
+                    val login =
+                        (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
+                    val newRole: Int =
+                        (call.request.queryParameters["role"]
+                            ?: throw IllegalArgumentException("Invalid role")).toInt()
 
-                        if (this.UserService.read(login)?.login != "admin" || newRole > 2) {
-                            this.UserService.changeRole(login, newRole)
-                            call.respond(hashMapOf("success" to "Роль успешно измененна!"))
-                            call.respond(HttpStatusCode.OK)
-                        }
-                        else {
-                            call.respond(hashMapOf("error" to "Невозможно понижение роли данного пользователя!"))
-                            call.respond(HttpStatusCode.BadRequest)
-                        }
+                    if (UserService.read(login)?.login != "admin" || newRole > 2) {
+                        UserService.changeRole(login, newRole)
+                        call.respond(hashMapOf("success" to "Роль успешно измененна!"))
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(hashMapOf("error" to "Невозможно понижение роли данного пользователя!"))
+                        call.respond(HttpStatusCode.BadRequest)
                     }
+
                 }
             }
 
@@ -129,28 +121,23 @@ fun Application.configureUserRouting() {
 
                 val login = if (call.request.queryParameters["login"] != null && role > 2) {
                     call.request.queryParameters["login"]
-                }
-                else {
+                } else {
                     principal.payload.getClaim("login").asString()
                 }
 
-                with(DatabaseFactory) {
-                    if (login != "admin") {
-                        val startAmount = this.UserService.readAll().count()
-                        this.UserService.delete(login!!)
-                        if (startAmount - 1 == this.UserService.readAll().count()) {
-                            call.respond(hashMapOf("success" to "Пользователь '$login' успешно удалён!"))
-                            call.respond(HttpStatusCode.OK)
-                        }
-                        else {
-                            call.respond(hashMapOf("error" to "Данного пользователя не существует!"))
-                            call.respond(HttpStatusCode.BadRequest)
-                        }
-                    }
-                    else {
-                        call.respond(hashMapOf("error" to "Невозможно удаление данного пользователя!"))
+                if (login != "admin") {
+                    val startAmount = UserService.readAll().count()
+                    UserService.delete(login!!)
+                    if (startAmount - 1 == UserService.readAll().count()) {
+                        call.respond(hashMapOf("success" to "Пользователь '$login' успешно удалён!"))
+                        call.respond(HttpStatusCode.OK)
+                    } else {
+                        call.respond(hashMapOf("error" to "Данного пользователя не существует!"))
                         call.respond(HttpStatusCode.BadRequest)
                     }
+                } else {
+                    call.respond(hashMapOf("error" to "Невозможно удаление данного пользователя!"))
+                    call.respond(HttpStatusCode.BadRequest)
                 }
             }
         }

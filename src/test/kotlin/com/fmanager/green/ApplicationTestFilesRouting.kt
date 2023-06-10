@@ -1,5 +1,6 @@
 package com.fmanager.green
 
+import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.routers.configureFileRouting
@@ -18,6 +19,9 @@ import org.junit.Test
 import java.io.File
 
 class ApplicationTestFilesRouting {
+    init {
+        DatabaseFactory
+    }
     private suspend fun auth(password: String, app: ApplicationTestBuilder): HttpResponse =
         with(app) {
             client.post("/login") {
@@ -33,14 +37,10 @@ class ApplicationTestFilesRouting {
     fun testRootFilePost() = testApplication {
         // Setup
         application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-            configureFileRouting()
+            module()
         }
 
         val loginResponse = auth("root", this)
-
 
         // Test
         val response = client.post("/upload") {
@@ -73,22 +73,17 @@ class ApplicationTestFilesRouting {
     fun testRootFileGet() = testApplication {
         // Setup
         application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-            configureFileRouting()
+            module()
         }
 
         val loginResponse = auth("root", this)
 
         with(DatabaseFactory){
-            if (this.FileService.read("cross.png") == null){
+            if (this.FileService.read("cross.png") == null) {
                 val file = File("test/cross.png")
                 File("files/cross.png").writeBytes(file.readBytes())
 
-                with(DatabaseFactory) {
-                    this.FileService.create(ResponseFile("cross.png", 1))
-                }
+                this.FileService.create(ResponseFile("cross.png", 1))
             }
         }
 
@@ -115,32 +110,28 @@ class ApplicationTestFilesRouting {
     fun testRootFileDelete() = testApplication {
         // Setup
         application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-            configureFileRouting()
+            module()
         }
 
         val loginResponse = auth("root", this)
 
-        with(DatabaseFactory){
-            if (this.FileService.read("cross.png") == null){
+        with(DatabaseFactory) {
+            if (this.FileService.read("cross.png") == null) {
                 val file = File("test/cross.png")
                 File("files/cross.png").writeBytes(file.readBytes())
 
-                with(DatabaseFactory) {
-                    this.FileService.create(ResponseFile("cross.png", 1))
-                }
+                this.FileService.create(ResponseFile("cross.png", 1))
             }
         }
+        assertEquals(true, File("files/cross.png").exists())
 
 
         // Test
         val response = client.delete("/delete") {
             header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
             parameter("name", "cross.png")
-
         }
+        assertEquals(false, File("files/cross.png").delete())
         assertEquals(HttpStatusCode.OK, response.status)
     }
 
@@ -161,13 +152,12 @@ class ApplicationTestFilesRouting {
         val loginResponse = auth("root", this)
 
         with(DatabaseFactory){
-            if (this.FileService.read("cross.png") == null){
+            if (this.FileService.read("cross.png") == null) {
                 val file = File("test/cross.png")
                 File("files/cross.png").writeBytes(file.readBytes())
 
-                with(DatabaseFactory) {
-                    this.FileService.create(ResponseFile("cross.png", 1))
-                }
+                this.FileService.create(ResponseFile("cross.png", 1))
+
             }
         }
 

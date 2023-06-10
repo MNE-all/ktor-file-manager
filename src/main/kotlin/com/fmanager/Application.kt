@@ -4,6 +4,7 @@ import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.routers.configureFileRouting
 import com.fmanager.plugins.routers.configureUserRouting
+import com.fmanager.utils.DatabaseFactory
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
@@ -14,6 +15,8 @@ fun main() {
 }
 
 fun Application.module() {
+    DatabaseFactory.UserService
+    DatabaseFactory
     configureSecurity()
     configureSerialization()
     configureUserRouting()

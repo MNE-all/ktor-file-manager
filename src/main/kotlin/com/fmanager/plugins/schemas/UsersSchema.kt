@@ -3,9 +3,7 @@ package com.fmanager.plugins.schemas
 import AccessService
 import com.fmanager.utils.PasswordSecure
 import com.fmanager.utils.UUIDSerializer
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -41,22 +39,35 @@ class UserService(database: Database) {
         transaction(database) {
             SchemaUtils.create(Users)
         }
+//        // Проверка количества пользователей
+//        // Для проверкти наличия администратора
+//        CoroutineScope(Dispatchers.IO).launch {
+//            dbQuery {
+//                if (Users.selectAll().toList().isEmpty()) {
+//                    val newSalt = PasswordSecure.generateRandomSalt()
+//                    Users.insert {
+//                        it[name] = "admin"
+//                        it[login] = "admin"
+//                        it[password] = PasswordSecure.generateHash("root", newSalt)
+//                        it[role] = 3
+//                        it[salt] = newSalt
+//                    }[Users.id]
+//                }
+//            }
+//        }
+    }
 
-        // Проверка количества пользователей
-        // Для
-        CoroutineScope(Dispatchers.IO).launch {
-            if (readAll().isEmpty()){
-                dbQuery {
-                    val newSalt = PasswordSecure.generateRandomSalt()
-                    Users.insert {
-                        it[name] = "admin"
-                        it[login] = "admin"
-                        it[password] = PasswordSecure.generateHash("root", newSalt)
-                        it[role] = 3
-                        it[salt] = newSalt
-                    }[Users.id]
-                }
-            }
+
+    private fun init() {
+        if (Users.selectAll().toList().isEmpty()) {
+            val newSalt = PasswordSecure.generateRandomSalt()
+            Users.insert {
+                it[name] = "admin"
+                it[login] = "admin"
+                it[password] = PasswordSecure.generateHash("root", newSalt)
+                it[role] = 3
+                it[salt] = newSalt
+            }[Users.id]
         }
     }
 
@@ -84,6 +95,7 @@ class UserService(database: Database) {
 
     suspend fun readAll(): List<SystemUserInfo> = dbQuery {
         val list: MutableList<SystemUserInfo> = mutableListOf()
+        init()
         val query = Users.selectAll()
         query.forEach {
             list.add(

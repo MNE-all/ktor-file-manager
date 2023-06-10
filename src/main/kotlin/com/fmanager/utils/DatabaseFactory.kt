@@ -24,7 +24,7 @@ object DatabaseFactory {
 
     init {
         val driverClassName = "org.h2.Driver"
-        val jdbcURL = "jdbc:h2:file:./build/databaseV3"
+        val jdbcURL = "jdbc:h2:file:./build/file-manager-database"
         val database = Database.connect(jdbcURL, driverClassName)
         userService = UserService(database)
         accessService = AccessService(database)

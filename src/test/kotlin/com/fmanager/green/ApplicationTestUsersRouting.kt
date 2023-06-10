@@ -1,14 +1,19 @@
 package com.fmanager.green
 
+import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.routers.configureUserRouting
 import com.fmanager.plugins.schemas.ResponseUser
 import com.fmanager.utils.DatabaseFactory
+import com.fmanager.utils.DatabaseFactory.UserService
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -19,6 +24,7 @@ class ApplicationTestUsersRouting {
 
     @Serializable
     data class AuthToken(val token: String)
+
 
     // Создание профиля
     @Test
@@ -35,15 +41,17 @@ class ApplicationTestUsersRouting {
         }
         assertEquals("The 'K1G9APpTuEHpFx3dTDT8' account is created", response.bodyAsText())
         assertEquals(HttpStatusCode.Created, response.status)
+
+        with(DatabaseFactory){
+            this.UserService.delete("K1G9APpTuEHpFx3dTDT8")
+        }
     }
 
     // Авторизация пользователя
     @Test
     fun testRootLoginUser() = testApplication {
         application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
+            module()
         }
 
         val response = client.post("/login") {
@@ -64,9 +72,9 @@ class ApplicationTestUsersRouting {
             configureUserRouting()
         }
 
-        client.get("/users/admin").apply {
-            with(DatabaseFactory){
-                val user = this.UserService.read("admin")!!
+        CoroutineScope(Dispatchers.IO).launch {
+            client.get("/users/admin").apply {
+                val user = UserService.read("admin")!!
                 val admin = Json.decodeFromString<ResponseUser>(bodyAsText())
 
                 assertEquals(user.name, admin.name)
@@ -80,10 +88,15 @@ class ApplicationTestUsersRouting {
     // Удаление пользователя по токену
     @Test
     fun testRootDeleteUserByToken() = testApplication {
+        // Setup
         application {
             configureSerialization()
             configureSecurity()
             configureUserRouting()
+        }
+
+        with(DatabaseFactory){
+            this.UserService.create(ResponseUser("name", "K1G9APpTuEHpFx3dTDT8", "Brains"))
         }
 
         val loginResponse = client.post("/login") {
@@ -102,6 +115,7 @@ class ApplicationTestUsersRouting {
     // Удаление пользователя по логину
     @Test
     fun testRootDeleteUserByLogin() = testApplication {
+        // Setup
         application {
             configureSerialization()
             configureSecurity()
@@ -113,10 +127,11 @@ class ApplicationTestUsersRouting {
             parameter("password", "root")
         }
 
-        with(DatabaseFactory) {
+        with(DatabaseFactory){
             this.UserService.create(ResponseUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains"))
         }
 
+        // Test
         val response = client.delete("/users") {
             header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
             parameter("login", "V7HH6KRny3pg6WBbWqnu")
@@ -125,11 +140,16 @@ class ApplicationTestUsersRouting {
 
         assertEquals(true, response.bodyAsText().contains("success"))
         assertEquals(HttpStatusCode.OK, response.status)
+
+        with(DatabaseFactory){
+            this.UserService.delete("V7HH6KRny3pg6WBbWqnu")
+        }
     }
 
     // Изменение профиля
     @Test
     fun testRootUserUpdate() = testApplication {
+        // Setup
         application {
             configureSerialization()
             configureSecurity()
@@ -143,12 +163,16 @@ class ApplicationTestUsersRouting {
 
         var loginResponse = auth("root")
 
+        // Test
         val response = client.put("/users") {
             contentType(ContentType.Application.Json)
             header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
             setBody(Json.encodeToString(ResponseUser("admin", "admin", "newPassword")))
         }
+        assertEquals(true, response.bodyAsText().contains("success"))
+        assertEquals(HttpStatusCode.OK, response.status)
 
+        // Tears down
         loginResponse = auth("newPassword")
 
         client.put("/users") {
@@ -156,13 +180,12 @@ class ApplicationTestUsersRouting {
             header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
             setBody(Json.encodeToString(ResponseUser("admin", "admin", "root")))
         }
-        assertEquals(true, response.bodyAsText().contains("success"))
-        assertEquals(HttpStatusCode.OK, response.status)
     }
 
     // Изменения роли пользователя
     @Test
     fun testRootUserAccess() = testApplication {
+        // Setup
         application {
             configureSerialization()
             configureSecurity()
@@ -177,6 +200,7 @@ class ApplicationTestUsersRouting {
         with(DatabaseFactory) {
             this.UserService.create(ResponseUser("test", "AEvQpKyX2g7skEYxBHoC", "root"))
 
+            // Test
             val response = client.put("/users/access") {
                 contentType(ContentType.Application.Json)
                 header(
@@ -190,6 +214,7 @@ class ApplicationTestUsersRouting {
             assertEquals(true, response.bodyAsText().contains("success"))
             assertEquals(HttpStatusCode.OK, response.status)
 
+            // Teats down
             this.UserService.delete("AEvQpKyX2g7skEYxBHoC")
         }
     }
