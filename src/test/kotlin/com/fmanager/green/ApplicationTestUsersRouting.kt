@@ -1,7 +1,7 @@
 package com.fmanager.green
 
-import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.dao.implementation.DAOUsersImpl
+import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
@@ -19,10 +19,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ApplicationTestUsersRouting {
-    private val dao: DAOUsers = DAOUsersImpl().apply {
+    private val userService: DAOUsers = DAOUsersImpl().apply {
         runBlocking {
             if(allUsers().isEmpty()) {
-                addNewUser("admin", "admin", "root")
+                init("admin", "admin", "root")
             }
         }
     }
@@ -50,7 +50,7 @@ class ApplicationTestUsersRouting {
         assertEquals(HttpStatusCode.Created, response.status)
 
         // Tears down
-        dao.deleteUser("K1G9APpTuEHpFx3dTDT8")
+        userService.deleteUser("K1G9APpTuEHpFx3dTDT8")
 
     }
 
@@ -84,7 +84,7 @@ class ApplicationTestUsersRouting {
 
         // Test
         client.get("/users/admin").apply {
-            val user = dao.user("admin")!!
+            val user = userService.user("admin")!!
             val admin = Json.decodeFromString<ResponseUser>(bodyAsText())
 
             assertEquals(user.name, admin.name)
@@ -104,7 +104,7 @@ class ApplicationTestUsersRouting {
             configureUserRouting()
         }
 
-        dao.addNewUser("name", "K1G9APpTuEHpFx3dTDT8", "Brains")
+        userService.addNewUser("name", "K1G9APpTuEHpFx3dTDT8", "Brains")
 
 
         val loginResponse = client.post("/login") {
@@ -136,7 +136,7 @@ class ApplicationTestUsersRouting {
             parameter("password", "root")
         }
 
-        dao.addNewUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains")
+        userService.addNewUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains")
 
 
         // Test
@@ -201,7 +201,7 @@ class ApplicationTestUsersRouting {
             parameter("password", "root")
         }
 
-        dao.addNewUser("test", "AEvQpKyX2g7skEYxBHoC", "root")
+//        userService.addNewUser("test", "AEvQpKyX2g7skEYxBHoC", "root")
 
 
         // Test
@@ -219,7 +219,7 @@ class ApplicationTestUsersRouting {
         assertEquals(HttpStatusCode.OK, response.status)
 
         // Tears down
-        dao.deleteUser("AEvQpKyX2g7skEYxBHoC")
+        userService.deleteUser("AEvQpKyX2g7skEYxBHoC")
 
     }
 }

@@ -1,9 +1,11 @@
 package com.fmanager.green
 
-import com.fmanager.plugins.DatabaseFactory
-import com.fmanager.dao.interfaces.DAOFiles
 import com.fmanager.dao.implementation.DAOFilesImpl
+import com.fmanager.dao.implementation.DAOUsersImpl
+import com.fmanager.dao.interfaces.DAOFiles
+import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.module
+import com.fmanager.plugins.DatabaseFactory
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.schemas.ResponseFile
@@ -14,6 +16,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -21,9 +24,17 @@ import org.junit.Test
 import java.io.File
 
 class ApplicationTestFilesRouting {
-    val fileService: DAOFiles = DAOFilesImpl().apply {}
+    private val userService: DAOUsers = DAOUsersImpl().apply {
+        runBlocking {
+            if(allUsers().isEmpty()) {
+                init("admin", "admin", "root")
+            }
+        }
+    }
+    private val fileService: DAOFiles = DAOFilesImpl().apply {}
     init {
         DatabaseFactory
+        userService
     }
     private suspend fun auth(password: String, app: ApplicationTestBuilder): HttpResponse =
         with(app) {

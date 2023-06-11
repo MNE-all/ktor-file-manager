@@ -1,7 +1,7 @@
 package com.fmanager.routers
 
-import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.dao.implementation.DAOUsersImpl
+import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.plugins.schemas.ResponseUser
 import com.fmanager.utils.JWTService
 import com.fmanager.utils.PasswordSecure
@@ -20,9 +20,13 @@ fun Application.configureUserRouting() {
         val userService: DAOUsers = DAOUsersImpl().apply {
             runBlocking {
                 if(allUsers().isEmpty()) {
-                    addNewUser("admin", "admin", "root")
+                    init("admin", "admin", "root")
                 }
             }
+        }
+
+        get("/users") {
+            call.respond(userService.allUsers())
         }
 
         // Create user

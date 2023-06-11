@@ -1,7 +1,7 @@
 package com.fmanager.dao.implementation
 
-import com.fmanager.plugins.DatabaseFactory.dbQuery
 import com.fmanager.dao.interfaces.DAOUsers
+import com.fmanager.plugins.DatabaseFactory.dbQuery
 import com.fmanager.plugins.schemas.User
 import com.fmanager.plugins.schemas.UserService
 import com.fmanager.utils.PasswordSecure
@@ -39,6 +39,19 @@ class DAOUsersImpl: DAOUsers {
         }
         insertStatement.resultedValues?.singleOrNull()?.let(::resultRowToArticle)
     }
+
+    suspend fun init(name: String, login: String, password: String): User? = dbQuery{
+        val newSalt = PasswordSecure.generateRandomSalt()
+        val insertStatement = UserService.Users.insert {
+            it[UserService.Users.name] = name
+            it[UserService.Users.login] = login
+            it[UserService.Users.password] = PasswordSecure.generateHash(password, newSalt)
+            it[role] = 3
+            it[salt] = newSalt
+        }
+        insertStatement.resultedValues?.singleOrNull()?.let(::resultRowToArticle)
+    }
+
 
     override suspend fun editUser(oldLogin: String, newLogin: String,
                                   newName: String, newPassword: String): Boolean = dbQuery{
