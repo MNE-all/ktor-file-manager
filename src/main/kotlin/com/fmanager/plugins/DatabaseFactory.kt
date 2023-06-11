@@ -11,10 +11,6 @@ object DatabaseFactory {
     private var userService: UserService
     private var accessService: AccessService
     private var fileService: FileService
-    val UserService: UserService
-        get() {
-            return userService
-        }
     val AccessService: AccessService
         get() {
             return accessService
