@@ -24,7 +24,6 @@ data class User(
 data class ResponseUser(val name: String, val login: String, val password: String)
 
 class UserService(database: Database) {
-
     object Users : Table() {
         val id = uuid("id").autoGenerate()
         val name = varchar("name", length = 50)

@@ -1,9 +1,9 @@
 package com.fmanager.routers
 
-import com.fmanager.plugins.schemas.ResponseFile
-import com.fmanager.dao.DatabaseFactory
 import com.fmanager.dao.DatabaseFactory.AccessService
-import com.fmanager.dao.DatabaseFactory.FileService
+import com.fmanager.dao.files.DAOFiles
+import com.fmanager.dao.files.DAOFilesImpl
+import com.fmanager.plugins.schemas.ResponseFile
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
@@ -17,6 +17,7 @@ import java.io.File
 
 fun Application.configureFileRouting() {
     routing {
+        val fileService: DAOFiles = DAOFilesImpl().apply {}
         var fileAccess = ""
         var fileName = ""
         authenticate {
@@ -42,7 +43,7 @@ fun Application.configureFileRouting() {
                                 val fileBytes = part.streamProvider().readBytes()
                                 File("files/$fileName").writeBytes(fileBytes)
 
-                                FileService.create(ResponseFile(fileName, fileAccess.toInt()))
+                                fileService.addNewFile(ResponseFile(fileName, fileAccess.toInt()))
                             }
 
                             else -> {}
@@ -64,7 +65,7 @@ fun Application.configureFileRouting() {
 
                 val name = (call.request.queryParameters["name"] ?: throw IllegalArgumentException("Invalid file name"))
 
-                val fileInfo = FileService.read(name)
+                val fileInfo = fileService.file(name)
 
                 if (fileInfo != null && fileInfo.access <= role) {
                     val file = File("files/$name")
@@ -90,7 +91,7 @@ fun Application.configureFileRouting() {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
 
-                call.respond(FileService.readAll(role))
+                call.respond(fileService.allFiles(role))
                 call.respond(HttpStatusCode.OK)
 
             }
@@ -103,7 +104,7 @@ fun Application.configureFileRouting() {
                 val file = (call.request.queryParameters["file"] ?: throw IllegalArgumentException("Invalid file name"))
 
                 val multipartData = call.receiveMultipart()
-                val expodsedFile = FileService.read(file)
+                val expodsedFile = fileService.file(file)
 
                 if (role > 1 && expodsedFile != null && role >= expodsedFile.access) {
                     multipartData.forEachPart { part ->
@@ -126,9 +127,8 @@ fun Application.configureFileRouting() {
                                     File("files/$file").delete()
                                 }
 
-                                with(DatabaseFactory) {
-                                    this.FileService.update(file, ResponseFile(fileName, fileAccess.toInt()))
-                                }
+                                fileService.editFile(file, ResponseFile(fileName, fileAccess.toInt()))
+
                             }
 
                             else -> {}
@@ -153,7 +153,7 @@ fun Application.configureFileRouting() {
 
                     val file = File("files/$name")
                     file.delete()
-                    FileService.delete(name)
+                    fileService.deleteFile(name)
                     call.respond(HttpStatusCode.OK)
 
                 }

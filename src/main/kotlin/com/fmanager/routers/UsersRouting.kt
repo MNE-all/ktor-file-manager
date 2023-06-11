@@ -17,7 +17,7 @@ import kotlinx.coroutines.runBlocking
 
 fun Application.configureUserRouting() {
     routing {
-        val dao: DAOUsers = DAOUsersImpl().apply {
+        val userService: DAOUsers = DAOUsersImpl().apply {
             runBlocking {
                 if(allUsers().isEmpty()) {
                     addNewUser("admin", "admin", "root")
@@ -30,7 +30,7 @@ fun Application.configureUserRouting() {
             val user = call.receive<ResponseUser>()
             try {
                 call.respond(HttpStatusCode.Created,
-                    "The '${dao.addNewUser(user.name, user.login, user.password)!!.login}' account is created")
+                    "The '${userService.addNewUser(user.name, user.login, user.password)!!.login}' account is created")
             }
             catch (e: Exception){
                 call.respond(HttpStatusCode.BadRequest, "login is not unique")
@@ -38,7 +38,7 @@ fun Application.configureUserRouting() {
         }
         // Login
         post("/login") {
-            val users = dao.allUsers()
+            val users = userService.allUsers()
             val login = (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
             val password = (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
 
@@ -57,7 +57,7 @@ fun Application.configureUserRouting() {
         // Read user
         get("/users/{login}") {
             val login = (call.parameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-            val user = dao.user(login)
+            val user = userService.user(login)
             if (user != null) {
                 call.respond(HttpStatusCode.OK, ResponseUser(user.name, user.login, user.password.decodeToString()))
             } else {
@@ -72,7 +72,7 @@ fun Application.configureUserRouting() {
                 val user = call.receive<ResponseUser>()
 
                 if (login != "admin" || user.login == "admin") {
-                    dao.editUser(login, user.login, user.name, user.password)
+                    userService.editUser(login, user.login, user.name, user.password)
                     call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
                     call.respond(HttpStatusCode.OK)
                 } else {
@@ -101,8 +101,8 @@ fun Application.configureUserRouting() {
                         (call.request.queryParameters["role"]
                             ?: throw IllegalArgumentException("Invalid role")).toInt()
 
-                    if (dao.user(login)?.login != "admin" || newRole > 2) {
-                        dao.changeRole(login, newRole)
+                    if (userService.user(login)?.login != "admin" || newRole > 2) {
+                        userService.changeRole(login, newRole)
                         call.respond(hashMapOf("success" to "Роль успешно измененна!"))
                         call.respond(HttpStatusCode.OK)
                     } else {
@@ -125,9 +125,9 @@ fun Application.configureUserRouting() {
                 }
 
                 if (login != "admin") {
-                    val startAmount = dao.allUsers().count()
-                    dao.deleteUser(login!!)
-                    if (startAmount - 1 == dao.allUsers().count()) {
+                    val startAmount = userService.allUsers().count()
+                    userService.deleteUser(login!!)
+                    if (startAmount - 1 == userService.allUsers().count()) {
                         call.respond(hashMapOf("success" to "Пользователь '$login' успешно удалён!"))
                         call.respond(HttpStatusCode.OK)
                     } else {

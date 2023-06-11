@@ -1,12 +1,14 @@
 package com.fmanager.green
 
+import com.fmanager.dao.DatabaseFactory
+import com.fmanager.dao.files.DAOFiles
+import com.fmanager.dao.files.DAOFilesImpl
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
+import com.fmanager.plugins.schemas.ResponseFile
 import com.fmanager.routers.configureFileRouting
 import com.fmanager.routers.configureUserRouting
-import com.fmanager.plugins.schemas.ResponseFile
-import com.fmanager.dao.DatabaseFactory
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -19,6 +21,7 @@ import org.junit.Test
 import java.io.File
 
 class ApplicationTestFilesRouting {
+    val fileService: DAOFiles = DAOFilesImpl().apply {}
     init {
         DatabaseFactory
     }
@@ -63,9 +66,7 @@ class ApplicationTestFilesRouting {
 
         // TearDown
         File("files/cross.png").delete()
-        with(DatabaseFactory) {
-            this.FileService.delete("cross.png")
-        }
+        fileService.deleteFile("cross.png")
     }
 
     // Скачивание файла с сервера
@@ -78,18 +79,19 @@ class ApplicationTestFilesRouting {
 
         val loginResponse = auth("root", this)
 
-        with(DatabaseFactory){
-            if (this.FileService.read("cross.png") == null) {
-                val file = File("test/cross.png")
-                File("files/cross.png").writeBytes(file.readBytes())
+        if (fileService.file("cross.png") == null) {
+            val file = File("test/cross.png")
+            File("files/cross.png").writeBytes(file.readBytes())
 
-                this.FileService.create(ResponseFile("cross.png", 1))
-            }
+            fileService.addNewFile(ResponseFile("cross.png", 1))
         }
 
         // Test
         val response = client.get("/download") {
-            header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
+            header(
+                HttpHeaders.Authorization,
+                "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}"
+            )
             parameter("name", "cross.png")
 
         }
@@ -100,9 +102,8 @@ class ApplicationTestFilesRouting {
 
         // TearDown
         File("files/cross.png").delete()
-        with(DatabaseFactory) {
-            this.FileService.delete("cross.png")
-        }
+        fileService.deleteFile("cross.png")
+
     }
 
     // Удаление файла с сервера
@@ -115,14 +116,12 @@ class ApplicationTestFilesRouting {
 
         val loginResponse = auth("root", this)
 
-        with(DatabaseFactory) {
-            if (this.FileService.read("cross.png") == null) {
+            if (fileService.file("cross.png") == null) {
                 val file = File("test/cross.png")
                 File("files/cross.png").writeBytes(file.readBytes())
 
-                this.FileService.create(ResponseFile("cross.png", 1))
+                fileService.addNewFile(ResponseFile("cross.png", 1))
             }
-        }
         assertEquals(true, File("files/cross.png").exists())
 
 
@@ -151,19 +150,21 @@ class ApplicationTestFilesRouting {
 
         val loginResponse = auth("root", this)
 
-        with(DatabaseFactory){
-            if (this.FileService.read("cross.png") == null) {
-                val file = File("test/cross.png")
-                File("files/cross.png").writeBytes(file.readBytes())
+        if (fileService.file("cross.png") == null) {
+            val file = File("test/cross.png")
+            File("files/cross.png").writeBytes(file.readBytes())
 
-                this.FileService.create(ResponseFile("cross.png", 1))
+            fileService.addNewFile(ResponseFile("cross.png", 1))
 
-            }
+
         }
 
         // Test
         val response = client.put("/files") {
-            header(HttpHeaders.Authorization, "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}")
+            header(
+                HttpHeaders.Authorization,
+                "Bearer ${Json.decodeFromString<AuthToken>(loginResponse.bodyAsText()).token}"
+            )
             contentType(ContentType.Application.Json)
             setBody(
                 MultiPartFormDataContent(
@@ -183,9 +184,7 @@ class ApplicationTestFilesRouting {
 
         // TearDown
         File("files/index.html").delete()
-        with(DatabaseFactory) {
-            this.FileService.delete("index.html")
-        }
+        fileService.deleteFile("index.html")
     }
 
     // Получение списка файлов, доступных для взаимодействия
