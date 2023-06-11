@@ -1,16 +1,17 @@
 package com.fmanager.green
 
+import com.fmanager.dao.users.DAOUsers
+import com.fmanager.dao.users.DAOUsersImpl
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.schemas.ResponseUser
 import com.fmanager.routers.configureUserRouting
-import com.fmanager.utils.DatabaseFactory
-import com.fmanager.utils.DatabaseFactory.UserService
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -18,6 +19,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ApplicationTestUsersRouting {
+    private val dao: DAOUsers = DAOUsersImpl().apply {
+        runBlocking {
+            if(allUsers().isEmpty()) {
+                addNewUser("admin", "admin", "root")
+            }
+        }
+    }
 
     @Serializable
     data class AuthToken(val token: String)
@@ -42,9 +50,8 @@ class ApplicationTestUsersRouting {
         assertEquals(HttpStatusCode.Created, response.status)
 
         // Tears down
-        with(DatabaseFactory){
-            this.UserService.delete("K1G9APpTuEHpFx3dTDT8")
-        }
+        dao.deleteUser("K1G9APpTuEHpFx3dTDT8")
+
     }
 
     // Авторизация пользователя
@@ -77,12 +84,12 @@ class ApplicationTestUsersRouting {
 
         // Test
         client.get("/users/admin").apply {
-            val user = UserService.read("admin")!!
+            val user = dao.user("admin")!!
             val admin = Json.decodeFromString<ResponseUser>(bodyAsText())
 
             assertEquals(user.name, admin.name)
             assertEquals(user.login, admin.login)
-            assertEquals(user.password, admin.password)
+            assertEquals(user.password.decodeToString(), admin.password)
             assertEquals(HttpStatusCode.OK, status)
         }
     }
@@ -97,9 +104,8 @@ class ApplicationTestUsersRouting {
             configureUserRouting()
         }
 
-        with(DatabaseFactory){
-            this.UserService.create(ResponseUser("name", "K1G9APpTuEHpFx3dTDT8", "Brains"))
-        }
+        dao.addNewUser("name", "K1G9APpTuEHpFx3dTDT8", "Brains")
+
 
         val loginResponse = client.post("/login") {
             parameter("login", "K1G9APpTuEHpFx3dTDT8")
@@ -130,9 +136,8 @@ class ApplicationTestUsersRouting {
             parameter("password", "root")
         }
 
-        with(DatabaseFactory){
-            this.UserService.create(ResponseUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains"))
-        }
+        dao.addNewUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains")
+
 
         // Test
         val response = client.delete("/users") {
@@ -196,9 +201,8 @@ class ApplicationTestUsersRouting {
             parameter("password", "root")
         }
 
-        with(DatabaseFactory) {
-            this.UserService.create(ResponseUser("test", "AEvQpKyX2g7skEYxBHoC", "root"))
-        }
+        dao.addNewUser("test", "AEvQpKyX2g7skEYxBHoC", "root")
+
 
         // Test
         val response = client.put("/users/access") {
@@ -215,8 +219,7 @@ class ApplicationTestUsersRouting {
         assertEquals(HttpStatusCode.OK, response.status)
 
         // Tears down
-        with(DatabaseFactory) {
-            this.UserService.delete("AEvQpKyX2g7skEYxBHoC")
-        }
+        dao.deleteUser("AEvQpKyX2g7skEYxBHoC")
+
     }
 }

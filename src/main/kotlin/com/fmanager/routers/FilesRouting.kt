@@ -1,9 +1,9 @@
 package com.fmanager.routers
 
 import com.fmanager.plugins.schemas.ResponseFile
-import com.fmanager.utils.DatabaseFactory
-import com.fmanager.utils.DatabaseFactory.AccessService
-import com.fmanager.utils.DatabaseFactory.FileService
+import com.fmanager.dao.DatabaseFactory
+import com.fmanager.dao.DatabaseFactory.AccessService
+import com.fmanager.dao.DatabaseFactory.FileService
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*

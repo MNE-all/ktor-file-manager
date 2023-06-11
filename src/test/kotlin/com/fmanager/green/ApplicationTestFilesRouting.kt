@@ -6,7 +6,7 @@ import com.fmanager.plugins.configureSerialization
 import com.fmanager.routers.configureFileRouting
 import com.fmanager.routers.configureUserRouting
 import com.fmanager.plugins.schemas.ResponseFile
-import com.fmanager.utils.DatabaseFactory
+import com.fmanager.dao.DatabaseFactory
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*

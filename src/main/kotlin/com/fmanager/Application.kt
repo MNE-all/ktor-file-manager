@@ -1,9 +1,9 @@
 package com.fmanager
 
+import com.fmanager.dao.DatabaseFactory
 import com.fmanager.plugins.configureRouting
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
-import com.fmanager.utils.DatabaseFactory
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*

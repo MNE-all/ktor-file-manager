@@ -1,10 +1,9 @@
 package com.fmanager.routers
 
-import com.auth0.jwt.JWT
-import com.auth0.jwt.algorithms.Algorithm
+import com.fmanager.dao.users.DAOUsers
+import com.fmanager.dao.users.DAOUsersImpl
 import com.fmanager.plugins.schemas.ResponseUser
-import com.fmanager.utils.DatabaseFactory.UserService
-import com.fmanager.utils.JWTPrefs
+import com.fmanager.utils.JWTService
 import com.fmanager.utils.PasswordSecure
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -13,24 +12,33 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import java.util.*
+import kotlinx.coroutines.runBlocking
+
 
 fun Application.configureUserRouting() {
     routing {
-        // Test
-        get("/users") {
-            call.respond(UserService.readAll())
+        val dao: DAOUsers = DAOUsersImpl().apply {
+            runBlocking {
+                if(allUsers().isEmpty()) {
+                    addNewUser("admin", "admin", "root")
+                }
+            }
         }
 
         // Create user
         post("/users") {
-                val user = call.receive<ResponseUser>()
-                val login = UserService.create(user)
-                call.respond(HttpStatusCode.Created, "The '$login' account is created")
+            val user = call.receive<ResponseUser>()
+            try {
+                call.respond(HttpStatusCode.Created,
+                    "The '${dao.addNewUser(user.name, user.login, user.password)!!.login}' account is created")
+            }
+            catch (e: Exception){
+                call.respond(HttpStatusCode.BadRequest, "login is not unique")
+            }
         }
         // Login
         post("/login") {
-            val users = UserService.readAll()
+            val users = dao.allUsers()
             val login = (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
             val password = (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
 
@@ -40,16 +48,7 @@ fun Application.configureUserRouting() {
 
                 if (user.login == login && trueHase == hash) {
                     // Generate JWT
-                    with(JWTPrefs) {
-                        val token = JWT.create()
-                            .withAudience(jwtAudience)
-                            .withIssuer(jwtDomain)
-                            .withClaim("login", user.login)
-                            .withClaim("role", user.role)
-                            .withExpiresAt(Date(System.currentTimeMillis() + 60000))
-                            .sign(Algorithm.HMAC256(jwtSecret))
-                        call.respond(hashMapOf("token" to token))
-                    }
+                    call.respond(hashMapOf("token" to JWTService.generateToken(user.login, user.role)))
                     return@post
                 }
             }
@@ -58,9 +57,9 @@ fun Application.configureUserRouting() {
         // Read user
         get("/users/{login}") {
             val login = (call.parameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-            val user = UserService.read(login)
+            val user = dao.user(login)
             if (user != null) {
-                call.respond(HttpStatusCode.OK, user)
+                call.respond(HttpStatusCode.OK, ResponseUser(user.name, user.login, user.password.decodeToString()))
             } else {
                 call.respond(HttpStatusCode.NotFound)
             }
@@ -73,7 +72,7 @@ fun Application.configureUserRouting() {
                 val user = call.receive<ResponseUser>()
 
                 if (login != "admin" || user.login == "admin") {
-                    UserService.update(login, user)
+                    dao.editUser(login, user.login, user.name, user.password)
                     call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
                     call.respond(HttpStatusCode.OK)
                 } else {
@@ -102,8 +101,8 @@ fun Application.configureUserRouting() {
                         (call.request.queryParameters["role"]
                             ?: throw IllegalArgumentException("Invalid role")).toInt()
 
-                    if (UserService.read(login)?.login != "admin" || newRole > 2) {
-                        UserService.changeRole(login, newRole)
+                    if (dao.user(login)?.login != "admin" || newRole > 2) {
+                        dao.changeRole(login, newRole)
                         call.respond(hashMapOf("success" to "Роль успешно измененна!"))
                         call.respond(HttpStatusCode.OK)
                     } else {
@@ -126,9 +125,9 @@ fun Application.configureUserRouting() {
                 }
 
                 if (login != "admin") {
-                    val startAmount = UserService.readAll().count()
-                    UserService.delete(login!!)
-                    if (startAmount - 1 == UserService.readAll().count()) {
+                    val startAmount = dao.allUsers().count()
+                    dao.deleteUser(login!!)
+                    if (startAmount - 1 == dao.allUsers().count()) {
                         call.respond(hashMapOf("success" to "Пользователь '$login' успешно удалён!"))
                         call.respond(HttpStatusCode.OK)
                     } else {

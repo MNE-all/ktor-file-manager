@@ -1,9 +1,11 @@
-package com.fmanager.utils
+package com.fmanager.dao
 
 import AccessService
 import com.fmanager.plugins.schemas.FileService
 import com.fmanager.plugins.schemas.UserService
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
 object DatabaseFactory {
     private var userService: UserService
@@ -30,4 +32,6 @@ object DatabaseFactory {
         accessService = AccessService(database)
         fileService = FileService(database)
     }
+    suspend fun <T> dbQuery(block: suspend () -> T): T =
+        newSuspendedTransaction(Dispatchers.IO) { block() }
 }
