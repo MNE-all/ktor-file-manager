@@ -1,13 +1,14 @@
-package com.fmanager.dao.files
+package com.fmanager.dao.implementation
 
-import com.fmanager.dao.DatabaseFactory.dbQuery
+import com.fmanager.dao.interfaces.DAOFiles
+import com.fmanager.plugins.DatabaseFactory.dbQuery
 import com.fmanager.plugins.schemas.File
 import com.fmanager.plugins.schemas.FileService
 import com.fmanager.plugins.schemas.ResponseFile
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 
-class DAOFilesImpl: DAOFiles{
+class DAOFilesImpl: DAOFiles {
     override suspend fun allFiles(role: Int): List<File> = dbQuery{
         val list: MutableList<File> = mutableListOf()
         val query = FileService.Files.selectAll()

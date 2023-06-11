@@ -1,8 +1,8 @@
 package com.fmanager.routers
 
-import com.fmanager.dao.DatabaseFactory.AccessService
-import com.fmanager.dao.files.DAOFiles
-import com.fmanager.dao.files.DAOFilesImpl
+import com.fmanager.plugins.DatabaseFactory.AccessService
+import com.fmanager.dao.interfaces.DAOFiles
+import com.fmanager.dao.implementation.DAOFilesImpl
 import com.fmanager.plugins.schemas.ResponseFile
 import io.ktor.http.*
 import io.ktor.http.content.*

@@ -1,4 +1,4 @@
-package com.fmanager.dao.files
+package com.fmanager.dao.interfaces
 
 import com.fmanager.plugins.schemas.File
 import com.fmanager.plugins.schemas.ResponseFile

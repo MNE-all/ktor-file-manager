@@ -1,8 +1,8 @@
 package com.fmanager.green
 
-import com.fmanager.dao.DatabaseFactory
-import com.fmanager.dao.files.DAOFiles
-import com.fmanager.dao.files.DAOFilesImpl
+import com.fmanager.plugins.DatabaseFactory
+import com.fmanager.dao.interfaces.DAOFiles
+import com.fmanager.dao.implementation.DAOFilesImpl
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization

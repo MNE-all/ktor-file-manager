@@ -1,6 +1,7 @@
-package com.fmanager.dao.users
+package com.fmanager.dao.implementation
 
-import com.fmanager.dao.DatabaseFactory.dbQuery
+import com.fmanager.plugins.DatabaseFactory.dbQuery
+import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.plugins.schemas.User
 import com.fmanager.plugins.schemas.UserService
 import com.fmanager.utils.PasswordSecure

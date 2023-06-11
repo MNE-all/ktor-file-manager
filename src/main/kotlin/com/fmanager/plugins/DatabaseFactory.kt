@@ -1,4 +1,4 @@
-package com.fmanager.dao
+package com.fmanager.plugins
 
 import AccessService
 import com.fmanager.plugins.schemas.FileService
@@ -18,10 +18,6 @@ object DatabaseFactory {
     val AccessService: AccessService
         get() {
             return accessService
-        }
-    val FileService: FileService
-        get() {
-            return fileService
         }
 
     init {

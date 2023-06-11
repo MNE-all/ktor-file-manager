@@ -1,4 +1,4 @@
-package com.fmanager.dao.users
+package com.fmanager.dao.interfaces
 
 import com.fmanager.plugins.schemas.User
 

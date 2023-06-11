@@ -1,6 +1,6 @@
 package com.fmanager
 
-import com.fmanager.dao.DatabaseFactory
+import com.fmanager.plugins.DatabaseFactory
 import com.fmanager.plugins.configureRouting
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization

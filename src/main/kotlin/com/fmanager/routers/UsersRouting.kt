@@ -1,7 +1,7 @@
 package com.fmanager.routers
 
-import com.fmanager.dao.users.DAOUsers
-import com.fmanager.dao.users.DAOUsersImpl
+import com.fmanager.dao.interfaces.DAOUsers
+import com.fmanager.dao.implementation.DAOUsersImpl
 import com.fmanager.plugins.schemas.ResponseUser
 import com.fmanager.utils.JWTService
 import com.fmanager.utils.PasswordSecure

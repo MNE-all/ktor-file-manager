@@ -1,7 +1,7 @@
 package com.fmanager.green
 
-import com.fmanager.dao.users.DAOUsers
-import com.fmanager.dao.users.DAOUsersImpl
+import com.fmanager.dao.interfaces.DAOUsers
+import com.fmanager.dao.implementation.DAOUsersImpl
 import com.fmanager.module
 import com.fmanager.plugins.configureSecurity
 import com.fmanager.plugins.configureSerialization
