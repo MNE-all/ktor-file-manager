@@ -2,15 +2,16 @@ package com.fmanager.green
 
 import com.fmanager.dao.implementation.DAOUsersImpl
 import com.fmanager.dao.interfaces.DAOUsers
-import com.fmanager.module
-import com.fmanager.plugins.configureSecurity
-import com.fmanager.plugins.configureSerialization
+import com.fmanager.plugins.DatabaseFactory
 import com.fmanager.plugins.schemas.ResponseUser
-import com.fmanager.routers.configureUserRouting
+import com.fmanager.utils.generateHash
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -22,9 +23,28 @@ class ApplicationTestUsersRouting {
     private val userService: DAOUsers = DAOUsersImpl().apply {
         runBlocking {
             if(allUsers().isEmpty()) {
-                init("admin", "admin", "root")
+                testApplication {
+                    application {
+                        val function = this::generateHash
+                        CoroutineScope(Dispatchers.IO).launch {
+                            init("admin", "admin", "root", function)
+                        }
+                    }
+                }
+            }
+            testApplication {
+                application {
+                    CoroutineScope(Dispatchers.IO).launch {
+                        addNewUser("Test", "K1G9APpTuEHpFx3dTDT9", "Brains", this@application::generateHash)
+                    }
+                }
             }
         }
+    }
+
+    init {
+        DatabaseFactory
+        userService
     }
 
     @Serializable
@@ -34,13 +54,7 @@ class ApplicationTestUsersRouting {
     // Создание профиля
     @Test
     fun testRootPostUser() = testApplication {
-        // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-        }
-
+        userService.deleteUser("K1G9APpTuEHpFx3dTDT8")
         // Test
         val response = client.post("/users") {
             contentType(ContentType.Application.Json)
@@ -57,11 +71,6 @@ class ApplicationTestUsersRouting {
     // Авторизация пользователя
     @Test
     fun testRootLoginUser() = testApplication {
-        // Setup
-        application {
-            module()
-        }
-
         // Test
         val response = client.post("/login") {
             parameter("login", "admin")
@@ -75,13 +84,6 @@ class ApplicationTestUsersRouting {
     // Просмотр информации о конкретном пользователе (в данном случае - об администаторе)
     @Test
     fun testRootReadUser()= testApplication {
-        // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-        }
-
         // Test
         client.get("/users/admin").apply {
             val user = userService.user("admin")!!
@@ -98,17 +100,9 @@ class ApplicationTestUsersRouting {
     @Test
     fun testRootDeleteUserByToken() = testApplication {
         // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-        }
-
-        userService.addNewUser("name", "K1G9APpTuEHpFx3dTDT8", "Brains")
-
 
         val loginResponse = client.post("/login") {
-            parameter("login", "K1G9APpTuEHpFx3dTDT8")
+            parameter("login", "K1G9APpTuEHpFx3dTDT9")
             parameter("password", "Brains")
         }
 
@@ -126,9 +120,9 @@ class ApplicationTestUsersRouting {
     fun testRootDeleteUserByLogin() = testApplication {
         // Setup
         application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
+            CoroutineScope(Dispatchers.IO).launch {
+                userService.addNewUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains", this@application::generateHash)
+            }
         }
 
         val loginResponse = client.post("/login") {
@@ -136,7 +130,8 @@ class ApplicationTestUsersRouting {
             parameter("password", "root")
         }
 
-        userService.addNewUser("Test", "V7HH6KRny3pg6WBbWqnu", "Brains")
+
+
 
 
         // Test
@@ -154,11 +149,7 @@ class ApplicationTestUsersRouting {
     @Test
     fun testRootUserUpdate() = testApplication {
         // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-        }
+
         suspend fun auth(password: String): HttpResponse =
             client.post("/login") {
                 parameter("login", "admin")
@@ -191,17 +182,16 @@ class ApplicationTestUsersRouting {
     fun testRootUserAccess() = testApplication {
         // Setup
         application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
+            CoroutineScope(Dispatchers.IO).launch {
+                userService.addNewUser("test", "AEvQpKyX2g7skEYxBHoC",
+                    "root",
+                    this@application::generateHash)
+            }
         }
-
         val loginResponse = client.post("/login") {
             parameter("login", "admin")
             parameter("password", "root")
         }
-
-//        userService.addNewUser("test", "AEvQpKyX2g7skEYxBHoC", "root")
 
 
         // Test

@@ -3,8 +3,8 @@ package com.fmanager.routers
 import com.fmanager.dao.implementation.DAOUsersImpl
 import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.plugins.schemas.ResponseUser
-import com.fmanager.utils.JWTService
-import com.fmanager.utils.PasswordSecure
+import com.fmanager.utils.generateHash
+import com.fmanager.utils.generateToken
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -20,11 +20,10 @@ fun Application.configureUserRouting() {
         val userService: DAOUsers = DAOUsersImpl().apply {
             runBlocking {
                 if(allUsers().isEmpty()) {
-                    init("admin", "admin", "root")
+                    init("admin", "admin", "root", application::generateHash)
                 }
             }
         }
-
         get("/users") {
             call.respond(userService.allUsers())
         }
@@ -34,7 +33,7 @@ fun Application.configureUserRouting() {
             val user = call.receive<ResponseUser>()
             try {
                 call.respond(HttpStatusCode.Created,
-                    "The '${userService.addNewUser(user.name, user.login, user.password)!!.login}' account is created")
+                    "The '${userService.addNewUser(user.name, user.login, user.password, application::generateHash)!!.login}' account is created")
             }
             catch (e: Exception){
                 call.respond(HttpStatusCode.BadRequest, "login is not unique")
@@ -47,12 +46,12 @@ fun Application.configureUserRouting() {
             val password = (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
 
             users.forEach{ user ->
-                val hash = PasswordSecure.generateHash(password, user.salt).decodeToString()
+                val hash = application.generateHash(password, user.salt).decodeToString()
                 val trueHase = user.password.decodeToString()
 
                 if (user.login == login && trueHase == hash) {
                     // Generate JWT
-                    call.respond(hashMapOf("token" to JWTService.generateToken(user.login, user.role)))
+                    call.respond(hashMapOf("token" to application.generateToken(user.login, user.role)))
                     return@post
                 }
             }
@@ -76,7 +75,7 @@ fun Application.configureUserRouting() {
                 val user = call.receive<ResponseUser>()
 
                 if (login != "admin" || user.login == "admin") {
-                    userService.editUser(login, user.login, user.name, user.password)
+                    userService.editUser(login, user.login, user.name, user.password, application::generateHash)
                     call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
                     call.respond(HttpStatusCode.OK)
                 } else {

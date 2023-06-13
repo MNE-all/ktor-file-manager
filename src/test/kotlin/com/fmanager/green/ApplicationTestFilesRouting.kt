@@ -4,18 +4,17 @@ import com.fmanager.dao.implementation.DAOFilesImpl
 import com.fmanager.dao.implementation.DAOUsersImpl
 import com.fmanager.dao.interfaces.DAOFiles
 import com.fmanager.dao.interfaces.DAOUsers
-import com.fmanager.module
 import com.fmanager.plugins.DatabaseFactory
-import com.fmanager.plugins.configureSecurity
-import com.fmanager.plugins.configureSerialization
 import com.fmanager.plugins.schemas.ResponseFile
-import com.fmanager.routers.configureFileRouting
-import com.fmanager.routers.configureUserRouting
+import com.fmanager.utils.generateHash
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -27,7 +26,14 @@ class ApplicationTestFilesRouting {
     private val userService: DAOUsers = DAOUsersImpl().apply {
         runBlocking {
             if(allUsers().isEmpty()) {
-                init("admin", "admin", "root")
+                testApplication {
+                    application {
+                        val function = this::generateHash
+                        CoroutineScope(Dispatchers.IO).launch {
+                            init("admin", "admin", "root", function)
+                        }
+                    }
+                }
             }
         }
     }
@@ -50,10 +56,6 @@ class ApplicationTestFilesRouting {
     @Test
     fun testRootFilePost() = testApplication {
         // Setup
-        application {
-            module()
-        }
-
         val loginResponse = auth("root", this)
 
         // Test
@@ -84,10 +86,6 @@ class ApplicationTestFilesRouting {
     @Test
     fun testRootFileGet() = testApplication {
         // Setup
-        application {
-            module()
-        }
-
         val loginResponse = auth("root", this)
 
         if (fileService.file("cross.png") == null) {
@@ -121,10 +119,6 @@ class ApplicationTestFilesRouting {
     @Test
     fun testRootFileDelete() = testApplication {
         // Setup
-        application {
-            module()
-        }
-
         val loginResponse = auth("root", this)
 
             if (fileService.file("cross.png") == null) {
@@ -152,13 +146,6 @@ class ApplicationTestFilesRouting {
     @Test
     fun testRootFileUpdate() = testApplication {
         // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-            configureFileRouting()
-        }
-
         val loginResponse = auth("root", this)
 
         if (fileService.file("cross.png") == null) {
@@ -202,12 +189,6 @@ class ApplicationTestFilesRouting {
     @Test
     fun testRootFileListGet() = testApplication {
         // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureUserRouting()
-            configureFileRouting()
-        }
         val loginResponse = auth("root", this)
 
 
@@ -221,13 +202,6 @@ class ApplicationTestFilesRouting {
     // Получение списка уровней доступа
     @Test
     fun testRootAccessGet() = testApplication {
-        // Setup
-        application {
-            configureSerialization()
-            configureSecurity()
-            configureFileRouting()
-        }
-
         // Test
         val response = client.get("/access") {}
         assertEquals(HttpStatusCode.OK, response.status)

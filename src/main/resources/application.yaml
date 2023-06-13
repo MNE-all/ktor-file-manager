@@ -1,0 +1,19 @@
+ktor:
+  deployment:
+    port: 4444
+  application:
+    modules:
+      - com.fmanager.ApplicationKt.module
+
+
+jwt:
+  secret: "secret"
+  issuer: "http://0.0.0.0:4444/"
+  audience: "file-manager.com"
+  realm: "ktor file manager app"
+
+secure:
+  ALGORITHM: "PBKDF2WithHmacSHA512"
+  ITERATIONS: 120000
+  KEY_LENGTH: 256
+  SECRET: "SomeRandomSecret"

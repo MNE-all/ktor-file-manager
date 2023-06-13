@@ -2,23 +2,18 @@ package com.fmanager.utils
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
+import io.ktor.server.application.*
 import java.util.*
-
-object JWTService {
-    const val jwtAudience = "file-manager.com"
-    const val jwtDomain = "http://0.0.0.0:8080/" // "http://file-manager.com"
-    const val jwtRealm = "ktor file manager app"
-    const val jwtSecret = "secret"
-
-    fun generateToken(login: String, role: Int): String{
-        with(JWTService) {
-             return JWT.create()
-                .withAudience(jwtAudience)
-                .withIssuer(jwtDomain)
-                .withClaim("login", login)
-                .withClaim("role", role)
-                .withExpiresAt(Date(System.currentTimeMillis() + 60000))
-                .sign(Algorithm.HMAC256(jwtSecret))
-        }
-    }
+fun Application.generateToken(login: String, role: Int): String {
+    val issuer = environment.config.property("jwt.issuer").getString()
+    val audience = environment.config.property("jwt.audience").getString()
+    val secret = environment.config.property("jwt.secret").getString()
+    return JWT.create()
+        .withAudience(audience)
+        .withIssuer(issuer)
+        .withClaim("login", login)
+        .withClaim("role", role)
+        .withExpiresAt(Date(System.currentTimeMillis() + 60000))
+        .sign(Algorithm.HMAC256(secret))
 }
+

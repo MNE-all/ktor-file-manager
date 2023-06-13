@@ -28,24 +28,25 @@ class DAOUsersImpl: DAOUsers {
             .singleOrNull()
     }
 
-    override suspend fun addNewUser(name: String, login: String, password: String): User? = dbQuery{
+    override suspend fun addNewUser(name: String, login: String, password: String, function: (String, ByteArray)-> ByteArray): User? = dbQuery{
         val newSalt = PasswordSecure.generateRandomSalt()
+
         val insertStatement = UserService.Users.insert {
             it[UserService.Users.name] = name
             it[UserService.Users.login] = login
-            it[UserService.Users.password] = PasswordSecure.generateHash(password, newSalt)
+            it[UserService.Users.password] = function(password, newSalt)
             it[role] = 1
             it[salt] = newSalt
         }
         insertStatement.resultedValues?.singleOrNull()?.let(::resultRowToArticle)
     }
 
-    suspend fun init(name: String, login: String, password: String): User? = dbQuery{
+    suspend fun init(name: String, login: String, password: String, function: (String, ByteArray)-> ByteArray): User? = dbQuery{
         val newSalt = PasswordSecure.generateRandomSalt()
         val insertStatement = UserService.Users.insert {
             it[UserService.Users.name] = name
             it[UserService.Users.login] = login
-            it[UserService.Users.password] = PasswordSecure.generateHash(password, newSalt)
+            it[UserService.Users.password] = function(password, newSalt)
             it[role] = 3
             it[salt] = newSalt
         }
@@ -53,13 +54,18 @@ class DAOUsersImpl: DAOUsers {
     }
 
 
-    override suspend fun editUser(oldLogin: String, newLogin: String,
-                                  newName: String, newPassword: String): Boolean = dbQuery{
+    override suspend fun editUser(
+        oldLogin: String,
+        newLogin: String,
+        newName: String,
+        newPassword: String,
+        function: (String, ByteArray)-> ByteArray
+    ): Boolean = dbQuery{
         val newSalt = PasswordSecure.generateRandomSalt()
         UserService.Users.update({ UserService.Users.login eq oldLogin }) {
             it[name] = newName
             it[login] = newLogin
-            it[password] = PasswordSecure.generateHash(newPassword, newSalt)
+            it[password] = function(newPassword, newSalt)
             it[salt] = newSalt
         } > 0
     }
