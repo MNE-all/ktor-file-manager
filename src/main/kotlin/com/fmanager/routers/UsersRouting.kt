@@ -46,13 +46,15 @@ fun Application.configureUserRouting() {
             val password = (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
 
             users.forEach{ user ->
-                val hash = application.generateHash(password, user.salt).decodeToString()
-                val trueHase = user.password.decodeToString()
+                if (user.login == login) {
+                    val hash = application.generateHash(password, user.salt).decodeToString()
+                    val trueHase = user.password.decodeToString()
 
-                if (user.login == login && trueHase == hash) {
-                    // Generate JWT
-                    call.respond(hashMapOf("token" to application.generateToken(user.login, user.role)))
-                    return@post
+                    if (trueHase == hash) {
+                        // Generate JWT
+                        call.respond(hashMapOf("token" to application.generateToken(user.login, user.role)))
+                        return@post
+                    }
                 }
             }
             call.respond(hashMapOf("error" to "Ошибка при авторизации!"))
