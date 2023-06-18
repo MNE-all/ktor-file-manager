@@ -3,6 +3,7 @@ package com.fmanager.routers
 import com.fmanager.dao.implementation.DAOUsersImpl
 import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.plugins.schemas.ResponseUser
+import com.fmanager.plugins.services.UserService
 import com.fmanager.utils.generateHash
 import com.fmanager.utils.generateToken
 import io.ktor.http.*
@@ -41,28 +42,22 @@ fun Application.configureUserRouting() {
         }
         // Login
         post("/login") {
-            val users = userService.allUsers()
             val login = (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-            val password = (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
+            val password =
+                (call.request.queryParameters["password"] ?: throw IllegalArgumentException("Invalid password"))
 
-            users.forEach{ user ->
-                if (user.login == login) {
-                    val hash = application.generateHash(password, user.salt).decodeToString()
-                    val trueHase = user.password.decodeToString()
-
-                    if (trueHase == hash) {
-                        // Generate JWT
-                        call.respond(hashMapOf("token" to application.generateToken(user.login, user.role)))
-                        return@post
-                    }
-                }
+            val role = UserService(application::generateHash).login(login, password)
+            if (role != null) {
+                // Generate JWT
+                call.respond(hashMapOf("token" to application.generateToken(login, role)))
+                return@post
             }
             call.respond(hashMapOf("error" to "Ошибка при авторизации!"))
         }
         // Read user
         get("/users/{login}") {
             val login = (call.parameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-            val user = userService.user(login)
+            val user = UserService(application::generateHash).getCurrentUser(login)
             if (user != null) {
                 call.respond(HttpStatusCode.OK, ResponseUser(user.name, user.login, user.password.decodeToString()))
             } else {
@@ -76,8 +71,7 @@ fun Application.configureUserRouting() {
                 val login = principal!!.payload.getClaim("login").asString()
                 val user = call.receive<ResponseUser>()
 
-                if (login != "admin" || user.login == "admin") {
-                    userService.editUser(login, user.login, user.name, user.password, application::generateHash)
+                if (UserService(application::generateHash).editUser(login, user)) {
                     call.respond(hashMapOf("success" to "Пользователь '${user.login}' успешно изменен!"))
                     call.respond(HttpStatusCode.OK)
                 } else {
@@ -98,25 +92,20 @@ fun Application.configureUserRouting() {
             put("/users/access") {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
+                val newRole: Int =
+                    (call.request.queryParameters["role"] ?: throw IllegalArgumentException("Invalid role")).toInt()
+                val login = call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login")
 
-                if (role > 2) {
-                    val login =
-                        (call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-                    val newRole: Int =
-                        (call.request.queryParameters["role"]
-                            ?: throw IllegalArgumentException("Invalid role")).toInt()
-
-                    if (userService.user(login)?.login != "admin" || newRole > 2) {
-                        userService.changeRole(login, newRole)
-                        call.respond(hashMapOf("success" to "Роль успешно измененна!"))
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(hashMapOf("error" to "Невозможно понижение роли данного пользователя!"))
-                        call.respond(HttpStatusCode.BadRequest)
-                    }
-
+                if (UserService(application::generateHash).changeAccess(role, newRole, login)) {
+                    call.respond(hashMapOf("success" to "Роль успешно измененна!"))
+                    call.respond(HttpStatusCode.OK)
+                }
+                else {
+                    call.respond(hashMapOf("error" to "Невозможно понижение роли данного пользователя!"))
+                    call.respond(HttpStatusCode.BadRequest)
                 }
             }
+
 
             // Delete user
             delete("/users") {
