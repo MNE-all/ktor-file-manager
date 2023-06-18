@@ -1,7 +1,5 @@
 package com.fmanager.routers
 
-import com.fmanager.dao.implementation.DAOUsersImpl
-import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.plugins.schemas.ResponseUser
 import com.fmanager.plugins.services.UserService
 import com.fmanager.utils.generateHash
@@ -13,30 +11,20 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.runBlocking
 
 
 fun Application.configureUserRouting() {
     routing {
-        val userService: DAOUsers = DAOUsersImpl().apply {
-            runBlocking {
-                if(allUsers().isEmpty()) {
-                    init("admin", "admin", "root", application::generateHash)
-                }
-            }
-        }
         get("/users") {
-            call.respond(userService.allUsers())
+            call.respond(UserService(null).allUsers())
         }
 
         // Create user
         post("/users") {
-            val user = call.receive<ResponseUser>()
-            try {
-                call.respond(HttpStatusCode.Created,
-                    "The '${userService.addNewUser(user.name, user.login, user.password, application::generateHash)!!.login}' account is created")
-            }
-            catch (e: Exception){
+            val userLogin = UserService(application::generateHash).addUser(call.receive<ResponseUser>())
+            if (userLogin != null) {
+                call.respond(HttpStatusCode.Created, "The '$userLogin' account is created")
+            } else {
                 call.respond(HttpStatusCode.BadRequest, "login is not unique")
             }
         }
@@ -57,7 +45,7 @@ fun Application.configureUserRouting() {
         // Read user
         get("/users/{login}") {
             val login = (call.parameters["login"] ?: throw IllegalArgumentException("Invalid login"))
-            val user = UserService(application::generateHash).getCurrentUser(login)
+            val user = UserService(null).getCurrentUser(login)
             if (user != null) {
                 call.respond(HttpStatusCode.OK, ResponseUser(user.name, user.login, user.password.decodeToString()))
             } else {
@@ -96,11 +84,10 @@ fun Application.configureUserRouting() {
                     (call.request.queryParameters["role"] ?: throw IllegalArgumentException("Invalid role")).toInt()
                 val login = call.request.queryParameters["login"] ?: throw IllegalArgumentException("Invalid login")
 
-                if (UserService(application::generateHash).changeAccess(role, newRole, login)) {
+                if (UserService(null).changeAccess(role, newRole, login)) {
                     call.respond(hashMapOf("success" to "Роль успешно измененна!"))
                     call.respond(HttpStatusCode.OK)
-                }
-                else {
+                } else {
                     call.respond(hashMapOf("error" to "Невозможно понижение роли данного пользователя!"))
                     call.respond(HttpStatusCode.BadRequest)
                 }
@@ -111,25 +98,18 @@ fun Application.configureUserRouting() {
             delete("/users") {
                 val principal = call.principal<JWTPrincipal>()
                 val role = principal!!.payload.getClaim("role").asInt()
-
                 val login = if (call.request.queryParameters["login"] != null && role > 2) {
                     call.request.queryParameters["login"]
                 } else {
                     principal.payload.getClaim("login").asString()
                 }
 
-                if (login != "admin") {
-                    val startAmount = userService.allUsers().count()
-                    userService.deleteUser(login!!)
-                    if (startAmount - 1 == userService.allUsers().count()) {
-                        call.respond(hashMapOf("success" to "Пользователь '$login' успешно удалён!"))
-                        call.respond(HttpStatusCode.OK)
-                    } else {
-                        call.respond(hashMapOf("error" to "Данного пользователя не существует!"))
-                        call.respond(HttpStatusCode.BadRequest)
-                    }
+                val message = UserService(null).deleteUser(login!!)
+                if (message.contains("success")) {
+                    call.respond(message)
+                    call.respond(HttpStatusCode.OK)
                 } else {
-                    call.respond(hashMapOf("error" to "Невозможно удаление данного пользователя!"))
+                    call.respond(message)
                     call.respond(HttpStatusCode.BadRequest)
                 }
             }

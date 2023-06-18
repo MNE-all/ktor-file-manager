@@ -6,16 +6,11 @@ import com.fmanager.dao.interfaces.DAOFiles
 import com.fmanager.dao.interfaces.DAOUsers
 import com.fmanager.plugins.DatabaseFactory
 import com.fmanager.plugins.schemas.ResponseFile
-import com.fmanager.utils.generateHash
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -23,21 +18,8 @@ import org.junit.Test
 import java.io.File
 
 class ApplicationTestFilesRouting {
-    private val userService: DAOUsers = DAOUsersImpl().apply {
-        runBlocking {
-            if(allUsers().isEmpty()) {
-                testApplication {
-                    application {
-                        val function = this::generateHash
-                        CoroutineScope(Dispatchers.IO).launch {
-                            init("admin", "admin", "root", function)
-                        }
-                    }
-                }
-            }
-        }
-    }
-    private val fileService: DAOFiles = DAOFilesImpl().apply {}
+    private val userService: DAOUsers = DAOUsersImpl()
+    private val fileService: DAOFiles = DAOFilesImpl()
     init {
         DatabaseFactory
         userService

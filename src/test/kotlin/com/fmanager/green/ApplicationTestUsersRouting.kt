@@ -12,7 +12,6 @@ import io.ktor.server.testing.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,27 +19,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class ApplicationTestUsersRouting {
-    private val userService: DAOUsers = DAOUsersImpl().apply {
-        runBlocking {
-            if(allUsers().isEmpty()) {
-                testApplication {
-                    application {
-                        val function = this::generateHash
-                        CoroutineScope(Dispatchers.IO).launch {
-                            init("admin", "admin", "root", function)
-                        }
-                    }
-                }
-            }
-            testApplication {
-                application {
-                    CoroutineScope(Dispatchers.IO).launch {
-                        addNewUser("Test", "K1G9APpTuEHpFx3dTDT9", "Brains", this@application::generateHash)
-                    }
-                }
-            }
-        }
-    }
+    private val userService: DAOUsers = DAOUsersImpl()
 
     init {
         DatabaseFactory
@@ -54,7 +33,6 @@ class ApplicationTestUsersRouting {
     // Создание профиля
     @Test
     fun testRootPostUser() = testApplication {
-        userService.deleteUser("K1G9APpTuEHpFx3dTDT8")
         // Test
         val response = client.post("/users") {
             contentType(ContentType.Application.Json)
@@ -100,6 +78,12 @@ class ApplicationTestUsersRouting {
     @Test
     fun testRootDeleteUserByToken() = testApplication {
         // Setup
+        // К сожалению тест зависим от создания пользователя
+        // (если ошибка в создании пользователя, тут также может отобразиться ошибка)
+        client.post("/users") {
+            contentType(ContentType.Application.Json)
+            setBody(Json.encodeToString(ResponseUser("Test", "K1G9APpTuEHpFx3dTDT9", "Brains")))
+        }
 
         val loginResponse = client.post("/login") {
             parameter("login", "K1G9APpTuEHpFx3dTDT9")
